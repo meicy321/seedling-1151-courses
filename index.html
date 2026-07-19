@@ -167,6 +167,13 @@ details.usage[open]>summary .chev{transform:rotate(180deg)}
 /* 被指引到的下載列，閃一下讓人找得到 */
 @keyframes flashRow{0%,100%{box-shadow:0 0 0 0 transparent}30%,70%{box-shadow:0 0 0 4px var(--brand-soft);border-color:var(--brand)}}
 .flash{animation:flashRow 1.6s ease 2}
+/* 已選提示列：勾了課才出現 */
+.picked-bar{margin-top:12px;display:flex;flex-wrap:wrap;align-items:center;gap:10px;
+  background:var(--brand-soft);border:1px solid var(--brand);border-radius:var(--radius);padding:11px 14px}
+.picked-txt{font-size:14px;font-weight:700;color:var(--brand-ink)}
+.picked-txt b{font-size:17px}
+.picked-go{margin-left:auto;padding:8px 14px;font-size:13.5px}
+.picked-clear{padding:8px 14px;font-size:13.5px}
 .tip-line{margin-top:12px;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 .linkbtn{border:1px solid var(--line);background:var(--panel);color:var(--brand-ink);font:inherit;font-size:12.5px;font-weight:700;padding:5px 11px;border-radius:999px;cursor:pointer}
 .linkbtn:hover{background:var(--brand-soft);border-color:var(--brand)}
@@ -372,6 +379,11 @@ footer.foot{color:var(--muted);font-size:12.5px;text-align:center;padding:34px 1
       <button class="how how-btn" id="goDownload"><div class="ic">⬇️</div><b>下載</b><span>Word／PDF／圖片</span></button>
       <div class="how"><div class="ic">⚠️</div><b>紅色格子</b><span>代表衝堂了</span></div>
       <div class="how"><div class="ic">🔤</div><b>右上角</b><span>切注音／深色</span></div>
+    </div>
+    <div class="picked-bar hidden" id="pickedBar">
+      <span class="picked-txt">目前已勾選 <b id="pickedNum">0</b> 門課</span>
+      <button class="btn-primary picked-go" id="pickedGo">看我的課表</button>
+      <button class="btn-ghost picked-clear" id="pickedClear">🗑 清空重選</button>
     </div>
     <p class="tip tip-line">🍽️ 課程像配方拼盤，<b>適量取用</b>：不要都不選，也不要塞太滿——空堂也是重要的營養。
       <button class="linkbtn" data-doc="guide">選課指南</button><button class="linkbtn" data-doc="preface">課程規劃前言</button><button class="linkbtn" data-doc="homeroom">導師班規劃</button></p>
@@ -987,6 +999,18 @@ function toggleSelect(id){
 function updateCount(){
   const n=selected.size;
   document.getElementById("segCount").textContent=n?("("+n+")"):"";
+  /* 首頁的已選提示列：沒選課時不出現，免得佔版面 */
+  const bar=document.getElementById("pickedBar");
+  if(bar){
+    bar.classList.toggle("hidden",n===0);
+    document.getElementById("pickedNum").textContent=n;
+  }
+}
+function clearAllSelections(){
+  if(!selected.size) return;
+  if(!confirm("確定要清空已勾選的 "+selected.size+" 門課嗎？\n清空後要重新勾選。")) return;
+  selected.clear(); saveSel(); updateCount(); renderGrid();
+  if(!document.getElementById("mineView").classList.contains("hidden")) renderMine();
 }
 
 /* ---------- modal ---------- */
@@ -1163,6 +1187,8 @@ document.querySelectorAll("#viewSeg button").forEach(b=>{
 /* 首頁的兩張卡片是真的可以按的：直接帶到我的課表／下載區 */
 document.getElementById("goMine").addEventListener("click",()=>showView("mine"));
 document.getElementById("goGrid").addEventListener("click",()=>showView("grid"));
+document.getElementById("pickedGo").addEventListener("click",()=>showView("mine"));
+document.getElementById("pickedClear").addEventListener("click",clearAllSelections);
 /* 左上角的校名／logo 也能回大課表 */
 const brandHome=document.getElementById("brandHome");
 brandHome.addEventListener("click",()=>showView("grid"));
@@ -1471,18 +1497,36 @@ async function inflateRaw(bytes){
   const ab=await new Response(new Blob([bytes]).stream().pipeThrough(ds)).arrayBuffer();
   return new Uint8Array(ab);
 }
-/* 把沒選到的課，從 document.xml 的表格裡整段刪掉 */
+/* 課名的字級（半點為單位，24 = 12pt）；老師與教室用小一級 */
+const DOCX_NAME_SZ=24, DOCX_META_SZ=19;
+const DOCX_FONT='<w:rFonts w:ascii="標楷體" w:eastAsia="標楷體" w:hAnsi="標楷體"/>';
+function docxRun(text,sz,bold){
+  return '<w:r><w:rPr>'+DOCX_FONT+(bold?"<w:b/>":"")+
+    '<w:sz w:val="'+sz+'"/><w:szCs w:val="'+sz+'"/></w:rPr>'+
+    '<w:t xml:space="preserve">'+text.replace(/&/g,"&amp;").replace(/</g,"&lt;")+'</w:t></w:r>';
+}
+/* 刪掉沒選的課；留下的課把「課名」放大加粗，(老師)教室 維持小字 */
 function stripUnselected(xml){
-  let removed=0;
+  let removed=0,restyled=0;
   const out=xml.replace(/<w:p [\s\S]*?<\/w:p>/g,function(para){
     const text=(para.match(/<w:t[^>]*>[^<]*<\/w:t>/g)||[])
       .map(t=>t.replace(/<[^>]+>/g,"")).join("").trim();
     if(!text) return para;
     const id=DOCXMAP[text];
-    if(id&&!selected.has(id)){ removed++; return ""; }
-    return para;
+    if(!id) return para;                       // 不是課程段落（例如生活討論會）就別動
+    if(!selected.has(id)){ removed++; return ""; }
+    // 拆成「課名」與「(老師)教室」兩段，分別給不同字級
+    const cut=text.indexOf("(");
+    if(cut<=0) return para;
+    const head=para.match(/^<w:p [^>]*>/)[0];
+    const pPr=(para.match(/<w:pPr>[\s\S]*?<\/w:pPr>/)||[""])[0];
+    restyled++;
+    return head+pPr+
+      docxRun(text.slice(0,cut),DOCX_NAME_SZ,true)+
+      docxRun(text.slice(cut),DOCX_META_SZ,false)+
+      "</w:p>";
   });
-  return {xml:out,removed};
+  return {xml:out,removed,restyled};
 }
 async function downloadDOCX_fromTemplate(){
   const res=await fetch(DOCX_TEMPLATE,{cache:"no-cache"});
@@ -1492,7 +1536,7 @@ async function downloadDOCX_fromTemplate(){
   const docEntry=entries.find(e=>e.name==="word/document.xml");
   if(!docEntry) throw new Error("範本裡沒有 document.xml");
   const raw=docEntry.method===8?await inflateRaw(docEntry.data):docEntry.data;
-  const {xml,removed}=stripUnselected(new TextDecoder().decode(raw));
+  const {xml,removed,restyled}=stripUnselected(new TextDecoder().decode(raw));
   const bytes=new TextEncoder().encode(xml);
   docEntry.method=0;                    // 改過的這筆用不壓縮寫回，其餘原封不動
   docEntry.data=bytes;
