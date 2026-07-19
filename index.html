@@ -239,6 +239,9 @@ body.zhuyin .how span,body.zhuyin .chip .meta{line-height:2}
 .stat.warn{background:var(--warn-soft);border-color:color-mix(in srgb,var(--warn) 40%,transparent)}
 .stat.warn .num{color:var(--warn)}
 .mine-actions{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap;align-items:center}
+/* 下載按鈕：副標讓人知道該選哪一個 */
+.mine-actions button small{display:block;font-size:10.5px;font-weight:600;opacity:.8;margin-top:1px;letter-spacing:.02em}
+.mine-actions button{line-height:1.2;text-align:center}
 .dl-label{font-size:12.5px;font-weight:800;color:var(--muted)}
 .btn-primary{background:var(--brand);color:#fff;border:0;font:inherit;font-weight:800;font-size:14px;padding:10px 18px;border-radius:10px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;box-shadow:var(--shadow)}
 .btn-primary:hover{filter:brightness(1.05)}
@@ -365,7 +368,7 @@ footer.foot{color:var(--muted);font-size:12.5px;text-align:center;padding:34px 1
       <button class="how how-btn" id="goGrid"><div class="ic">👀</div><b>點課名</b><span>看完整介紹</span></button>
       <div class="how"><div class="ic">☑️</div><b>勾方框</b><span>就是選這門課</span></div>
       <button class="how how-btn" id="goMine"><div class="ic">📋</div><b>我的課表</b><span>看自己排的課</span></button>
-      <button class="how how-btn" id="goDownload"><div class="ic">⬇️</div><b>下載</b><span>PDF／Word／圖片</span></button>
+      <button class="how how-btn" id="goDownload"><div class="ic">⬇️</div><b>下載</b><span>Word／PDF／圖片</span></button>
       <div class="how"><div class="ic">⚠️</div><b>紅色格子</b><span>代表衝堂了</span></div>
       <div class="how"><div class="ic">🔤</div><b>右上角</b><span>切注音／深色</span></div>
     </div>
@@ -1184,9 +1187,9 @@ function renderMine(){
     (clashCount?'<div class="stat warn"><div class="num">'+clashCount+'</div><div class="cap">衝堂時段</div></div>':'')+
     '<div class="mine-actions">'+
       '<span class="dl-label">下載：</span>'+
-      '<button class="btn-primary" id="dlPdf">📄 PDF</button>'+
-      '<button class="btn-ghost" id="dlDoc">📝 Word</button>'+
-      '<button class="btn-ghost" id="dlPng">🖼 圖片</button>'+
+      '<button class="btn-primary" id="dlDoc" title="下載後用 Word 開啟列印，版面與學校課表完全相同">📝 Word<small>跟學校一樣</small></button>'+
+      '<button class="btn-ghost" id="dlPdf" title="直接開啟列印視窗，版面為近似版">📄 PDF<small>快速列印</small></button>'+
+      '<button class="btn-ghost" id="dlPng" title="存成圖片，方便用手機看或傳給別人">🖼 圖片<small>手機好看</small></button>'+
       '<button class="btn-ghost" id="clearBtn">清空</button>'+
     '</div></div>';
   if(clashCount) html+='<div class="conflict-note">⚠ 有 '+clashCount+' 個時段選了不只一門課（衝堂），下方課表以紅色標出，請調整。</div>';
