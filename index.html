@@ -105,7 +105,9 @@ header.top{
   backdrop-filter:blur(8px);border-bottom:1px solid var(--line);
 }
 .top-inner{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:10px 16px;max-width:1180px;margin:0 auto}
-.brandmark{display:flex;align-items:center;gap:10px;min-width:0}
+.brandmark{display:flex;align-items:center;gap:10px;min-width:0;cursor:pointer;border-radius:10px;padding:4px 6px;margin:-4px -6px;transition:background .15s}
+.brandmark:hover{background:var(--brand-soft)}
+.brandmark:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .seed{width:34px;height:34px;flex:none;border-radius:50%;background:radial-gradient(circle at 34% 30%,var(--brand-soft),var(--brand));display:grid;place-items:center;box-shadow:var(--shadow)}
 .seed svg{width:20px;height:20px}
 .brandmark h1{font-size:16px;margin:0;font-weight:800;letter-spacing:.01em;line-height:1.15;white-space:nowrap}
@@ -296,7 +298,7 @@ footer.foot{color:var(--muted);font-size:12.5px;text-align:center;padding:34px 1
 <body>
 <header class="top">
   <div class="top-inner">
-    <div class="brandmark">
+    <div class="brandmark" id="brandHome" role="button" tabindex="0" title="回到大課表" aria-label="回到大課表">
       <span class="seed" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 21c0-5 0-8 3.5-11C18 8 18 12 15.5 14.5 13 17 12 17 12 21Z" fill="#fff" opacity=".95"/><path d="M12 21c0-4-1-6-4-8.5C5 10 5.5 6 8 8c2.5 2 4 4.5 4 8.5Z" fill="#fff" opacity=".7"/><path d="M12 21v-4" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg></span>
       <div>
         <h1>種籽實小 · 選課大課表</h1>
@@ -339,7 +341,7 @@ footer.foot{color:var(--muted);font-size:12.5px;text-align:center;padding:34px 1
     </div>
 
     <div class="howto" id="usage">
-      <div class="how"><div class="ic">👀</div><b>點課名</b><span>看完整介紹</span></div>
+      <button class="how how-btn" id="goGrid"><div class="ic">👀</div><b>點課名</b><span>看完整介紹</span></button>
       <div class="how"><div class="ic">☑️</div><b>勾方框</b><span>就是選這門課</span></div>
       <button class="how how-btn" id="goMine"><div class="ic">📋</div><b>我的課表</b><span>看自己排的課</span></button>
       <button class="how how-btn" id="goDownload"><div class="ic">⬇️</div><b>下載</b><span>PDF／Word／圖片</span></button>
@@ -1085,6 +1087,13 @@ document.querySelectorAll("#viewSeg button").forEach(b=>{
 });
 /* 首頁的兩張卡片是真的可以按的：直接帶到我的課表／下載區 */
 document.getElementById("goMine").addEventListener("click",()=>showView("mine"));
+document.getElementById("goGrid").addEventListener("click",()=>showView("grid"));
+/* 左上角的校名／logo 也能回大課表 */
+const brandHome=document.getElementById("brandHome");
+brandHome.addEventListener("click",()=>showView("grid"));
+brandHome.addEventListener("keydown",e=>{
+  if(e.key==="Enter"||e.key===" "){e.preventDefault();showView("grid");}
+});
 document.getElementById("goDownload").addEventListener("click",()=>{
   if(!selectedCourses().length){
     alert("還沒有勾選任何課喔！\n先在下面的大課表勾幾門想上的課，再回來下載。");
