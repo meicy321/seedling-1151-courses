@@ -56,7 +56,45 @@ body{
   background:var(--bg); color:var(--ink); font-family:var(--font-body);
   line-height:1.5; -webkit-font-smoothing:antialiased; font-size:15px;
 }
-body.cute{ --radius:18px; --chip-radius:14px; letter-spacing:.01em; }
+/* ---------- 可愛版 ----------
+   字體：jf 開源粉圓 2.1（SIL OFL 1.1），已子集化成站內用到的 2292 字，439KB。
+   只有 body.cute 會用到它，所以一般版／注音版的使用者完全不會下載這個檔案。
+   若 assets/huninn.woff2 不在（例如單獨帶走 index.html），會自動退回系統圓體。 */
+@font-face{
+  font-family:"huninn";
+  src:url("assets/huninn.woff2") format("woff2");
+  font-display:swap;
+  font-weight:400 700;
+}
+body.cute{
+  --radius:20px; --chip-radius:16px; letter-spacing:.02em;
+  font-family:"huninn","Yuanti TC","圓體-繁","Microsoft JhengHei Light",var(--font-body);
+  /* 粉嫩配色：彩度降低、亮度提高 */
+  --bg:#FFF7F2; --panel:#FFFFFF; --panel2:#FFF3F6;
+  --line:#F3DDE3; --line2:#FAEBEF;
+  --brand:#E8748F; --brand-ink:#C4526E; --brand-soft:#FFE6EC;
+  --gline:#F0CFD9; --gline-strong:#E8A9BC; --headbg:#FFEDF2;
+  --a-guo:#E8845C; --a-eng:#5B9BD5; --a-math:#A98BD9; --a-sci:#6FBF87;
+  --a-soc:#E8B84B; --a-art:#E87BAF; --a-pe:#5CC2C8; --a-comp:#9DBF6B; --a-life:#C0A894;
+}
+:root[data-theme="dark"] body.cute,body.cute:where([data-theme="dark"] *){
+  --bg:#231B1E; --panel:#2C2327; --panel2:#332A2E;
+}
+/* 領域小圖示 */
+.aemoji{display:none}
+body.cute .aemoji{display:inline-block;margin-right:3px;font-size:1.05em;line-height:1}
+/* 課程卡片：淡淡底色＋按下去會彈一下 */
+body.cute .chip{background:color-mix(in srgb,var(--c) 7%,var(--panel));transition:transform .12s ease}
+body.cute .chip:hover{transform:translateY(-1px) scale(1.01)}
+body.cute .chip.sel{background:color-mix(in srgb,var(--c) 16%,var(--panel))}
+@keyframes pop-check{0%{transform:scale(1)}45%{transform:scale(1.35) rotate(-8deg)}100%{transform:scale(1)}}
+body.cute .chip.pop .chk{animation:pop-check .34s ease}
+body.cute .how{border-width:2px}
+body.cute .how .ic{font-size:29px}
+body.cute .seg button.on{background:var(--brand)}
+@media (prefers-reduced-motion:reduce){
+  body.cute .chip,body.cute .chk.on{transition:none;animation:none}
+}
 body.zhuyin{ font-size:16px; }
 a{color:var(--brand-ink)}
 .wrap{max-width:1180px;margin:0 auto;padding:0 16px}
@@ -393,10 +431,14 @@ footer.foot{color:var(--muted);font-size:12.5px;text-align:center;padding:34px 1
 <script>
 /* ---------- 領域 ---------- */
 const AREAS={
-  guo:{name:"語文",v:"--a-guo"}, eng:{name:"英日文",v:"--a-eng"}, math:{name:"數學",v:"--a-math"},
-  sci:{name:"自然",v:"--a-sci"}, soc:{name:"社會",v:"--a-soc"}, art:{name:"藝術",v:"--a-art"},
-  pe:{name:"健體",v:"--a-pe"}, comp:{name:"綜合",v:"--a-comp"}, life:{name:"導師/生活",v:"--a-life"}
+  guo:{name:"語文",v:"--a-guo",e:"📖"}, eng:{name:"英日文",v:"--a-eng",e:"🔤"}, math:{name:"數學",v:"--a-math",e:"🔢"},
+  sci:{name:"自然",v:"--a-sci",e:"🌿"}, soc:{name:"社會",v:"--a-soc",e:"🌏"}, art:{name:"藝術",v:"--a-art",e:"🎨"},
+  pe:{name:"健體",v:"--a-pe",e:"⚽"}, comp:{name:"綜合",v:"--a-comp",e:"🧩"}, life:{name:"導師/生活",v:"--a-life",e:"🏠"}
 };
+/* 可愛版才顯示的領域小圖示 */
+function areaEmoji(area){
+  return document.body.classList.contains("cute") ? '<span class="aemoji">'+(AREAS[area].e||"")+'</span>' : "";
+}
 const DAYS=["星期一","星期二","星期三","星期四","星期五"];
 const PERIODS=[
   {n:"第1節",t:"9:40–10:20"},{n:"第2節",t:"10:30–11:10"},{n:"第3節",t:"11:20–12:00"},
@@ -774,7 +816,7 @@ const areaWrap=document.getElementById("areaFilters");
 Object.entries(AREAS).forEach(([k,a])=>{
   const b=document.createElement("button");
   b.className="pill area on"; b.dataset.area=k;
-  b.innerHTML='<span class="dot" style="--d:var('+a.v+')"></span>'+a.name;
+  b.innerHTML='<span class="dot" style="--d:var('+a.v+')"></span><span class="aemoji">'+(a.e||"")+'</span>'+a.name;
   b.style.setProperty("--brand-swap","var("+a.v+")");
   b.addEventListener("click",()=>{
     if(curAreas.has(k)&&curAreas.size>0){ if(b.classList.contains("on")){curAreas.delete(k);b.classList.remove("on");} }
@@ -819,9 +861,11 @@ function courseMatches(c){
   }
   return true;
 }
+/* 剛剛被勾/取消的那一門，重繪後讓它的勾勾彈一下（只在可愛版看得到動畫） */
+let lastToggled=null;
 function chip(c){
   const el=document.createElement("div");
-  el.className="chip"+(selected.has(c.id)?" sel":"");
+  el.className="chip"+(selected.has(c.id)?" sel":"")+(c.id===lastToggled?" pop":"");
   el.style.setProperty("--c","var("+AREAS[c.area].v+")");
   const chk=document.createElement("button");
   chk.className="chk"; chk.setAttribute("aria-label","選取 "+c.name);
@@ -829,7 +873,7 @@ function chip(c){
   chk.addEventListener("click",e=>{e.stopPropagation();toggleSelect(c.id);});
   const body=document.createElement("div"); body.className="body";
   const gtag=c.g.filter(x=>["低","中","高"].includes(x)).join("·")||c.g[0];
-  body.innerHTML='<div class="cname">'+ruby(c.short)+'</div><div class="meta"><span class="gtag" style="--c:var('+AREAS[c.area].v+')">'+gtag+'</span><span>'+c.teacher+'</span></div>';
+  body.innerHTML='<div class="cname">'+areaEmoji(c.area)+ruby(c.short)+'</div><div class="meta"><span class="gtag" style="--c:var('+AREAS[c.area].v+')">'+gtag+'</span><span>'+c.teacher+'</span></div>';
   body.addEventListener("click",()=>openModal(c.id));
   el.appendChild(chk); el.appendChild(body);
   return el;
@@ -865,7 +909,9 @@ function renderGrid(){
 }
 function toggleSelect(id){
   if(selected.has(id)) selected.delete(id); else selected.add(id);
+  lastToggled=id;
   saveSel(); renderGrid(); updateCount(); if(document.getElementById("selToggle").dataset.id===id) syncModalBtn(id);
+  lastToggled=null;   // 只讓這一次的重繪帶動畫，之後的重繪不再重播
 }
 function updateCount(){
   const n=selected.size;
@@ -881,7 +927,7 @@ function openModal(id){
   document.getElementById("mTitle").innerHTML=(document.body.classList.contains("zhuyin")?ruby(c.name):c.name);
   const badges=document.getElementById("mBadges");
   const gtag=c.g.join("、");
-  badges.innerHTML='<span class="badge area" style="--c:var('+AREAS[c.area].v+')">'+AREAS[c.area].name+'</span><span class="badge">'+gtag+'</span>';
+  badges.innerHTML='<span class="badge area" style="--c:var('+AREAS[c.area].v+')">'+areaEmoji(c.area)+AREAS[c.area].name+'</span><span class="badge">'+gtag+'</span>';
   const slotTxt=slotText(c);
   const kv=document.getElementById("mKv");
   let rows=[["老師",c.teacher],["對象",c.grade],["時數",c.hours],["時段",slotTxt],["教室",c.room]];
@@ -1189,40 +1235,73 @@ function hexA(hex,a){const h=hex.replace("#","");const r=parseInt(h.substr(0,2),
 function clip(g,txt,max){let t=txt;while(g.measureText(t).width>max&&t.length>1)t=t.slice(0,-1);return t===txt?t:t.slice(0,-1)+"…";}
 
 /* ---------- PDF / Word export ----------
-   版面比照學校原始課表（11501課表_0716.docx）：
-   7 欄＝節次｜時間｜週一～週五，含掃地時間、午休、導師時間、上車時間  */
+   版面完全比照學校原始課表 11501課表_0716.docx，尺寸直接從該檔的 XML 量出來：
+     頁面 A4 直式 210×297mm，四邊邊界 12.7mm（720 twips）
+     7 欄寬（twips）454 / 708 / 1846 / 1846 / 1847 / 1846 / 1847 → 共 183.34mm
+     11 列高（twips）305 / 398 / 645 / 1638 / 1285 / 308 / 645 / 1546 / 1061 / 395 / 395
+     框線 0.5pt、儲存格左右內距 0.49mm、字體標楷體
+   改動這裡之前請先確認學校新版課表的尺寸是否相同。                              */
 const EXP_START=["9:40","10:30","11:20","13:00","13:50","14:40"];
 const EXP_END=["10:20","11:10","12:00","13:40","14:30","15:20"];
+const TW=t=>(t/1440*25.4).toFixed(2)+"mm";        // twips → mm
+const COL_W=[454,708,1846,1846,1847,1846,1847];   // 欄寬
+const ROW_H=[305,398,645,1638,1285,308,645,1546,1061,395,395]; // 列高（依序對應下方 11 列）
+const EXP_TABLE_W=TW(COL_W.reduce((a,b)=>a+b,0));
+
 function mineTableExportHTML(){
   const map=buildSlotMap();
-  const B="1px solid #000";
-  const td='style="border:'+B+';padding:3px 4px;vertical-align:top;"';
-  const tdc='style="border:'+B+';padding:3px 4px;text-align:center;vertical-align:middle;"';
-  let h='<table cellspacing="0" cellpadding="0" style="border-collapse:collapse;width:100%;font-family:\'Microsoft JhengHei\',\'PingFang TC\',sans-serif;font-size:11px;table-layout:fixed;">';
-  h+='<colgroup><col style="width:5%"><col style="width:8%">'+DAYS.map(()=>'<col style="width:17.4%">').join('')+'</colgroup>';
-  // 表頭：一 二 三 四 五
-  h+='<tr><td colspan="2" '+tdc+'></td>'+["一","二","三","四","五"].map(d=>'<td '+tdc+'><b>'+d+'</b></td>').join('')+'</tr>';
-  // 掃地時間
-  h+='<tr><td colspan="2" '+tdc+'>9:10--9:25</td><td colspan="5" '+tdc+'>掃　　　地　　　時　　　間</td></tr>';
+  const B="0.5pt solid #000";
+  const base="border:"+B+";padding:0 "+TW(28)+";";
+  const mid=base+"text-align:center;vertical-align:middle;";
+  const top=base+"vertical-align:top;";
+  const rowH=i=>"height:"+TW(ROW_H[i])+";";
+  let r=0;
+  let h='<table cellspacing="0" cellpadding="0" style="border-collapse:collapse;table-layout:fixed;'+
+        'width:'+EXP_TABLE_W+';margin:0 auto;font-family:\'標楷體\',\'DFKai-SB\',\'BiauKai\',serif;font-size:9pt;line-height:1.25;">';
+  h+='<colgroup>'+COL_W.map(w=>'<col style="width:'+TW(w)+'">').join('')+'</colgroup>';
+
+  // 1 表頭：一 二 三 四 五
+  h+='<tr style="'+rowH(r++)+'"><td colspan="2" style="'+mid+'"></td>'+
+     ["一","二","三","四","五"].map(d=>'<td style="'+mid+'font-size:10.5pt;"><b>'+d+'</b></td>').join('')+'</tr>';
+  // 2 掃地時間
+  h+='<tr style="'+rowH(r++)+'"><td colspan="2" style="'+mid+'">9:10--9:25</td>'+
+     '<td colspan="5" style="'+mid+'">掃　　　　地　　　　時　　　　間</td></tr>';
+
   for(let p=0;p<6;p++){
-    if(p===3){
-      h+='<tr><td colspan="2" '+tdc+'>12:00-13:00</td>'+DAYS.map(()=>'<td '+tdc+'>午休（法庭）</td>').join('')+'</tr>';
+    if(p===3){ // 午休
+      h+='<tr style="'+rowH(r++)+'"><td colspan="2" style="'+mid+'">12:00-13:00</td>'+
+         DAYS.map(()=>'<td style="'+mid+'">午休（法庭）</td>').join('')+'</tr>';
     }
-    h+='<tr><td '+tdc+'>'+(p+1)+'</td><td '+tdc+'>'+EXP_START[p]+'<br>'+EXP_END[p]+'</td>';
+    h+='<tr style="'+rowH(r++)+'"><td style="'+mid+'">'+(p+1)+'</td>'+
+       '<td style="'+mid+'">'+EXP_START[p]+'<br>'+EXP_END[p]+'</td>';
     for(let d=0;d<5;d++){
       const arr=map[d+"-"+p]||[]; const clash=arr.length>1;
-      h+='<td style="border:'+B+';padding:3px 4px;vertical-align:top;'+(clash?'background:#FBEAE7;':'')+'">';
-      arr.forEach(c=>{h+='<div style="margin:0 0 2px;">'+c.short+'（'+c.teacher+'）'+c.room+'</div>';});
-      FIXED.filter(f=>f.day===d&&f.period===p).forEach(f=>{h+='<div style="margin:0 0 2px;">'+f.label+'</div>';});
+      h+='<td style="'+top+(clash?"background:#FBEAE7;":"")+'">';
+      arr.forEach(c=>{h+='<div>'+c.short+'（'+c.teacher+'）'+c.room+'</div>';});
+      FIXED.filter(f=>f.day===d&&f.period===p).forEach(f=>{h+='<div>'+f.label+'</div>';});
       h+='</td>';
     }
     h+='</tr>';
   }
   // 導師時間、上車
-  h+='<tr><td colspan="2" '+tdc+'>15:30-15:50</td><td colspan="5" '+tdc+'>導　　　師　　　時　　　間</td></tr>';
-  h+='<tr><td colspan="7" '+tdc+'>15:50上車　　　　　15:53開車</td></tr>';
+  h+='<tr style="'+rowH(r++)+'"><td colspan="2" style="'+mid+'">15:30-15:50</td>'+
+     '<td colspan="5" style="'+mid+'">導　　　　師　　　　時　　　　間</td></tr>';
+  h+='<tr style="'+rowH(r++)+'"><td colspan="7" style="'+mid+'">15:50上車　　　　　15:53開車</td></tr>';
   h+='</table>';
   return h;
+}
+/* 頁面設定與標題也照原檔：A4 直式、邊界 12.7mm、標楷體、標題 14pt */
+const EXPORT_PAGE_CSS=
+  "@page{size:A4 portrait;margin:"+TW(720)+";}"+
+  "html,body{margin:0;padding:0;}"+
+  "body{font-family:'標楷體','DFKai-SB','BiauKai',serif;color:#000;"+
+  "-webkit-print-color-adjust:exact;print-color-adjust:exact;}"+
+  "h2.t{font-size:14pt;font-weight:bold;text-align:center;margin:0 0 2mm;}"+
+  "p.sub{font-size:9pt;text-align:center;margin:0 0 2mm;}"+
+  ".hint{margin-top:3mm;font-size:8pt;}";
+function EXPORT_TITLE_HTML(){
+  return '<h2 class="t">種籽實小115學年第1學期課表　我的課表</h2>'+
+         '<p class="sub">'+exportHeaderHTML()+'</p>';
 }
 function exportHeaderHTML(){
   const sc=selectedCourses();
@@ -1232,11 +1311,11 @@ function downloadDOC(){
   const sc=selectedCourses(); if(!sc.length){alert("還沒有選課喔！");return;}
   const html='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">'+
     '<head><meta charset="utf-8"><title>我的課表</title><!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View></w:WordDocument></xml><![endif]-->'+
-    '<style>@page{size:A4 landscape;mso-page-orientation:landscape;margin:1.2cm;}body{font-family:"Microsoft JhengHei","PingFang TC",sans-serif;}</style></head>'+
-    '<body><h2 style="font-family:\'Microsoft JhengHei\',sans-serif;margin:0 0 4px;">我的課表 · 種籽實小 115 學年度第一學期</h2>'+
-    '<p style="font-family:\'Microsoft JhengHei\',sans-serif;color:#555;margin:0 0 12px;font-size:12px;">'+exportHeaderHTML()+'</p>'+
+    '<style>'+EXPORT_PAGE_CSS+'@page{mso-page-orientation:portrait;}</style></head>'+
+    '<body>'+
+    EXPORT_TITLE_HTML()+
     mineTableExportHTML()+
-    '<p style="font-family:\'Microsoft JhengHei\',sans-serif;font-size:11px;color:#888;margin-top:12px;">課程清單：'+sc.map(c=>c.short+'（'+c.teacher+'）').join('、')+'</p>'+
+    '<p class="hint">課程清單：'+sc.map(c=>c.short+'（'+c.teacher+'）').join('、')+'</p>'+
     '</body></html>';
   saveBlob(new Blob(['﻿'+html],{type:"application/msword"}),"我的課表_種籽115-1.doc");
 }
@@ -1253,9 +1332,8 @@ function saveBlob(blob,filename){
 function printDocHTML(){
   const sc=selectedCourses();
   return '<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="utf-8"><title>我的課表_種籽115-1</title>'+
-    '<style>@page{size:A4 landscape;margin:12mm;}html,body{margin:0;}body{font-family:"Microsoft JhengHei","PingFang TC",sans-serif;color:#000;-webkit-print-color-adjust:exact;print-color-adjust:exact;padding:4px;}h2{margin:0 0 4px;font-size:17px;text-align:center;}p.sub{color:#555;margin:0 0 10px;font-size:12px;text-align:center;}.hint{margin-top:10px;font-size:11px;color:#666;}</style></head><body>'+
-    '<h2>種籽實小 115 學年第 1 學期課表 · 我的課表</h2>'+
-    '<p class="sub">'+exportHeaderHTML()+'</p>'+
+    '<style>'+EXPORT_PAGE_CSS+'</style></head><body>'+
+    EXPORT_TITLE_HTML()+
     mineTableExportHTML()+
     '<p class="hint">課程清單：'+sc.map(c=>c.short+'（'+c.teacher+'）').join('、')+'</p>'+
     '</body></html>';
