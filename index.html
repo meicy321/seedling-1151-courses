@@ -1411,7 +1411,7 @@ function mineTableExportHTML(){
 const EXPORT_PAGE_CSS=
   "@page{size:A4 portrait;margin:"+TW(720)+";}"+
   "html,body{margin:0;padding:0;}"+
-  "body{font-family:'標楷體','DFKai-SB','BiauKai',serif;color:#000;"+
+  "body{font-family:'Microsoft JhengHei','微軟正黑體','PingFang TC',sans-serif;color:#000;"+
   "-webkit-print-color-adjust:exact;print-color-adjust:exact;}"+
   "h2.t{font-size:14pt;font-weight:bold;text-align:center;margin:0 0 2mm;}"+
   "p.sub{font-size:9pt;text-align:center;margin:0 0 2mm;}"+
@@ -1499,7 +1499,12 @@ async function inflateRaw(bytes){
 }
 /* 課名的字級（半點為單位，24 = 12pt）；老師與教室用小一級 */
 const DOCX_NAME_SZ=24, DOCX_META_SZ=19;
-const DOCX_FONT='<w:rFonts w:ascii="標楷體" w:eastAsia="標楷體" w:hAnsi="標楷體"/>';
+/* 學校原檔是標楷體，這裡整份換成微軟正黑體（螢幕與列印都比較好讀） */
+const DOCX_FONT_NAME="微軟正黑體";
+const DOCX_FONT='<w:rFonts w:ascii="'+DOCX_FONT_NAME+'" w:eastAsia="'+DOCX_FONT_NAME+'" w:hAnsi="'+DOCX_FONT_NAME+'"/>';
+function swapDocxFont(xml){
+  return xml.split('"標楷體"').join('"'+DOCX_FONT_NAME+'"');
+}
 function docxRun(text,sz,bold){
   return '<w:r><w:rPr>'+DOCX_FONT+(bold?"<w:b/>":"")+
     '<w:sz w:val="'+sz+'"/><w:szCs w:val="'+sz+'"/></w:rPr>'+
@@ -1536,7 +1541,7 @@ async function downloadDOCX_fromTemplate(){
   const docEntry=entries.find(e=>e.name==="word/document.xml");
   if(!docEntry) throw new Error("範本裡沒有 document.xml");
   const raw=docEntry.method===8?await inflateRaw(docEntry.data):docEntry.data;
-  const {xml,removed,restyled}=stripUnselected(new TextDecoder().decode(raw));
+  const {xml,removed,restyled}=stripUnselected(swapDocxFont(new TextDecoder().decode(raw)));
   const bytes=new TextEncoder().encode(xml);
   docEntry.method=0;                    // 改過的這筆用不壓縮寫回，其餘原封不動
   docEntry.data=bytes;
