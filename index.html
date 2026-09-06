@@ -1754,9 +1754,23 @@ function blocksToExportHTML(blocks){
     return "";
   }).join("");
 }
+/* 這門課最早上課的時段（星期*10+節次）。
+   不能直接用 slots[0]——slots 是照學校課表抄下來的，順序不一定是時間先後，
+   例如數三是 [[週二,1],[週一,3],[週五,3]]，其實週一就上了。 */
+function firstSlotKey(c){
+  return Math.min.apply(null,c.slots.map(s=>s[0]*10+s[1]));
+}
+/* 必修排最前面：語文 → 數學 → 英文，其餘照課表時間先後。
+   日文雖然歸在「英日文」科，但它是選修，所以不放進必修那一區。 */
+const CORE_RANK={guo:0,math:1,eng:2};
+function coreRank(c){
+  if(c.area==="eng"&&/^日文/.test(c.name)) return 9;
+  return (c.area in CORE_RANK)?CORE_RANK[c.area]:9;
+}
 function plansListHTML(){
-  /* 照課表時間先後排，跟課表對得起來 */
-  const sc=selectedCourses().slice().sort((a,b)=>a.slots[0][0]-b.slots[0][0]||a.slots[0][1]-b.slots[0][1]);
+  /* 必修在前，其餘照小孩課表的時間先後排 */
+  const sc=selectedCourses().slice().sort((a,b)=>
+    coreRank(a)-coreRank(b)||firstSlotKey(a)-firstSlotKey(b));
   return sc.map(function(c,i){
     const full=FULL[c.id];
     let h='<div class="c-item'+(i===0?" c-first":"")+'"><h3>'+esc(c.name)+"</h3>";
