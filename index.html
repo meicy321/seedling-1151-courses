@@ -1245,9 +1245,13 @@ function renderMine(){
       '<button class="btn-ghost" id="dlPdf" title="直接開啟列印視窗，版面為近似版">📄 PDF<small>快速列印</small></button>'+
       '<button class="btn-ghost" id="dlPng" title="存成圖片，方便用手機看或傳給別人">🖼 圖片<small>手機好看</small></button>'+
       '<span class="dl-sep" aria-hidden="true"></span>'+
-      '<span class="dl-label">攜帶物品／費用：</span>'+
-      '<button class="btn-ghost" id="dlSupplyDoc" title="每堂課要帶的東西與要繳的費用，Word 版">🎒 Word</button>'+
-      '<button class="btn-ghost" id="dlSupplyPdf" title="每堂課要帶的東西與要繳的費用，直接開啟列印視窗">🎒 PDF</button>'+
+      '<span class="dl-label">攜帶物品：</span>'+
+      '<button class="btn-ghost" id="dlSupplyDoc" title="每堂課要帶的東西、費用、作業、評量等注意事項，Word 版">🎒 Word</button>'+
+      '<button class="btn-ghost" id="dlSupplyPdf" title="每堂課要帶的東西、費用、作業、評量等注意事項，直接開啟列印視窗">🎒 PDF</button>'+
+      '<span class="dl-sep" aria-hidden="true"></span>'+
+      '<span class="dl-label">課程說明：</span>'+
+      '<button class="btn-ghost" id="dlPlanDoc" title="你選到的每一門課的完整課程規劃原文，Word 版">📖 Word</button>'+
+      '<button class="btn-ghost" id="dlPlanPdf" title="你選到的每一門課的完整課程規劃原文，直接開啟列印視窗">📖 PDF</button>'+
       '<button class="btn-ghost" id="clearBtn">清空</button>'+
     '</div></div>';
   if(clashCount) html+='<div class="conflict-note">⚠ 有 '+clashCount+' 個時段選了不只一門課（衝堂），下方課表以紅色標出，請調整。</div>';
@@ -1284,6 +1288,8 @@ function renderMine(){
   document.getElementById("dlDoc").addEventListener("click",downloadDOC);
   document.getElementById("dlSupplyDoc").addEventListener("click",downloadSuppliesDOC);
   document.getElementById("dlSupplyPdf").addEventListener("click",downloadSuppliesPDF);
+  document.getElementById("dlPlanDoc").addEventListener("click",downloadPlansDOC);
+  document.getElementById("dlPlanPdf").addEventListener("click",downloadPlansPDF);
   document.getElementById("clearBtn").addEventListener("click",()=>{if(confirm("確定要清空所有已選課程嗎？")){selected.clear();saveSel();updateCount();renderMine();renderGrid();}});
   refreshZhuyin();
 }
@@ -1655,7 +1661,7 @@ const SUPPLIES_PAGE_CSS=
   ".s-fee{margin:4px 0 0;font-weight:bold}"+
   ".s-none{margin:4px 0 0;color:#555}";
 function SUPPLIES_TITLE_HTML(){
-  return '<h2 class="t">我的課表・行前重點（攜帶物品、作業、檢測、評量、費用）</h2><p class="sub">種籽實小 115 學年度第一學期　（實際開課內容、金額以學校公告及老師通知為準）</p>';
+  return '<h2 class="t">我的課表・攜帶物品、費用、評量等注意事項</h2><p class="sub">種籽實小 115 學年度第一學期　（實際開課內容、金額以學校公告及老師通知為準）</p>';
 }
 /* 排序：內容（攜帶物品＋回家作業＋費用）字數越多的課排越前面，
    完全不用準備的字數是 0，自然沉到最後。
@@ -1698,6 +1704,103 @@ function printSuppliesHTML(){
     '<style>'+SUPPLIES_PAGE_CSS+'</style></head><body>'+
     SUPPLIES_TITLE_HTML()+suppliesListHTML()+
     '</body></html>';
+}
+/* ---------- 完整課程說明匯出 ----------
+   把選到的課的老師原文（FULL）串成一份可列印的文件。
+   刻意不放科別共同規劃（AREADOC）——那是整科共用的，每門課都印一次會重複好幾頁，
+   要看的人到網站上點課名就有。                                              */
+const PLANS_PAGE_CSS=
+  "@page{size:A4 portrait;margin:16mm;}"+
+  "html,body{margin:0;padding:0;}"+
+  "body{font-family:'Microsoft JhengHei','微軟正黑體','PingFang TC',sans-serif;color:#000;font-size:11pt;line-height:1.7;"+
+  "-webkit-print-color-adjust:exact;print-color-adjust:exact;}"+
+  "h2.t{font-size:16pt;font-weight:bold;text-align:center;margin:0 0 2mm;}"+
+  "p.sub{font-size:9pt;text-align:center;color:#555;margin:0 0 8mm;}"+
+  /* 一門課一頁：Word 與列印都吃 page-break-before，第一門不要在最前面多插一張空白頁 */
+  ".c-item{margin:0;page-break-before:always;break-before:page;}"+
+  ".c-item.c-first{page-break-before:auto;break-before:auto;}"+
+  ".c-item h3{margin:0 0 2px;font-size:14pt;page-break-after:avoid;}"+
+  ".c-meta{margin:0 0 4px;font-size:9.5pt;color:#333;}"+
+  ".c-fee{margin:0 0 6px;font-size:10pt;font-weight:bold;}"+
+  ".c-desc{margin:0 0 8px;padding:6px 10px;background:#f2f2f2;font-size:10pt;}"+
+  ".c-item h4{margin:10px 0 3px;font-size:11.5pt;font-weight:bold;page-break-after:avoid;}"+
+  ".c-item p{margin:0 0 6px;}"+
+  ".c-item ul{margin:0 0 6px;padding-left:1.4em;}"+
+  ".c-item li{margin:2px 0;}"+
+  ".c-kv{margin:0 0 6px;font-size:10.5pt;}"+
+  ".c-kv b{font-weight:bold;}"+
+  "table.c-tbl{border-collapse:collapse;width:100%;font-size:9.5pt;margin:0 0 8px;}"+
+  "table.c-tbl th,table.c-tbl td{border:1px solid #666;padding:3px 6px;vertical-align:top;text-align:left;}"+
+  "table.c-tbl th{background:#eee;font-weight:bold;}";
+function PLANS_TITLE_HTML(){
+  return '<h2 class="t">我的課表・完整課程說明</h2><p class="sub">種籽實小 115 學年度第一學期　以下為各科老師的課程規劃原文　（實際開課以學校公告為準）</p>';
+}
+/* 跟畫面上的 renderBlocks() 同一套區塊格式，但不加注音、改用列印用的樣式 */
+function blocksToExportHTML(blocks){
+  if(!blocks||!blocks.length) return "";
+  return blocks.map(function(b){
+    if(b.t==="p")  return "<p>"+esc(b.v)+"</p>";
+    if(b.t==="h")  return "<h4>"+esc(b.v)+"</h4>";
+    if(b.t==="ul") return "<ul>"+b.v.map(function(x){return "<li>"+esc(x)+"</li>";}).join("")+"</ul>";
+    if(b.t==="kv") return '<div class="c-kv">'+b.v.map(function(r){
+      return "<b>"+esc(r[0])+"：</b>"+esc(r[1]);}).join("<br>")+"</div>";
+    if(b.t==="tbl"){
+      var h='<table class="c-tbl">';
+      if(b.head&&b.head.length) h+="<thead><tr>"+b.head.map(function(x){return "<th>"+esc(x)+"</th>";}).join("")+"</tr></thead>";
+      h+="<tbody>"+(b.rows||[]).map(function(r){
+        return "<tr>"+r.map(function(x){return "<td>"+esc(x)+"</td>";}).join("")+"</tr>";}).join("")+"</tbody>";
+      return h+"</table>";
+    }
+    return "";
+  }).join("");
+}
+function plansListHTML(){
+  /* 照課表時間先後排，跟課表對得起來 */
+  const sc=selectedCourses().slice().sort((a,b)=>a.slots[0][0]-b.slots[0][0]||a.slots[0][1]-b.slots[0][1]);
+  return sc.map(function(c,i){
+    const full=FULL[c.id];
+    let h='<div class="c-item'+(i===0?" c-first":"")+'"><h3>'+esc(c.name)+"</h3>";
+    h+='<p class="c-meta">'+[c.grade,c.teacher+" 老師",allRooms(c)&&("教室 "+allRooms(c)),c.hours,slotText(c)]
+      .filter(Boolean).map(esc).join("　｜　")+"</p>";
+    if(c.fee) h+='<p class="c-fee">材料費／費用：'+esc(c.fee)+"</p>";
+    if(c.desc) h+='<p class="c-desc">'+esc(c.desc)+"</p>";
+    if(full&&full.blocks&&full.blocks.length) h+=blocksToExportHTML(full.blocks);
+    else h+="<p>（這門課目前沒有老師原文，請見網站上的課程簡介）</p>";
+    return h+"</div>";
+  }).join("");
+}
+function downloadPlansDOC(){
+  const sc=selectedCourses(); if(!sc.length){alert("還沒有選課喔！");return;}
+  const html='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">'+
+    '<head><meta charset="utf-8"><title>完整課程說明</title><!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View></w:WordDocument></xml><![endif]-->'+
+    '<style>'+PLANS_PAGE_CSS+'@page{mso-page-orientation:portrait;}</style></head>'+
+    '<body>'+PLANS_TITLE_HTML()+plansListHTML()+'</body></html>';
+  saveBlob(new Blob(['﻿'+html],{type:"application/msword"}),"完整課程說明_種籽115-1.doc");
+}
+function printPlansHTML(){
+  return '<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="utf-8"><title>完整課程說明_種籽115-1</title>'+
+    '<style>'+PLANS_PAGE_CSS+'</style></head><body>'+
+    PLANS_TITLE_HTML()+plansListHTML()+
+    '</body></html>';
+}
+function downloadPlansPDF(){
+  const sc=selectedCourses(); if(!sc.length){alert("還沒有選課喔！");return;}
+  printViaFrame("printFramePlans",printPlansHTML());
+}
+/* 三份文件共用同一套隱藏 iframe 列印流程（不用 window.open，才不會被彈出視窗封鎖擋掉） */
+function printViaFrame(id,html){
+  const old=document.getElementById(id); if(old)old.remove();
+  const f=document.createElement("iframe");
+  f.id=id;
+  f.setAttribute("aria-hidden","true");
+  f.style.cssText="position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;";
+  document.body.appendChild(f);
+  const d=f.contentWindow.document;
+  d.open(); d.write(html); d.close();
+  setTimeout(function(){
+    try{ f.contentWindow.focus(); f.contentWindow.print(); }
+    catch(err){ alert("這台裝置無法直接列印，請改用「Word」下載試試看。"); }
+  },400);
 }
 function downloadSuppliesPDF(){
   const sc=selectedCourses(); if(!sc.length){alert("還沒有選課喔！");return;}
