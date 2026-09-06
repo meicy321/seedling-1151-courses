@@ -1767,13 +1767,79 @@ function coreRank(c){
   if(c.area==="eng"&&/^日文/.test(c.name)) return 9;
   return (c.area in CORE_RANK)?CORE_RANK[c.area]:9;
 }
-function plansListHTML(){
+/* ---------- 只多出兩三行就縮成一頁 ----------
+   一門課一頁，但常常會有課只多出兩三行就掉到第二頁，很浪費紙也難看。
+   做法：先在隱藏 iframe 裡用 A4 的內文寬度排一次，量每門課的實際高度；
+   凡是「只超出一點點」（<= 3 行）的課，就把那門課的字級整體縮一級再量，
+   縮到剛好收得下為止。縮太多會看不清楚，所以最多縮到 88%，
+   還是放不下就讓它自然分頁。                                              */
+const PLAN_PT={body:11,h3:14,meta:9.5,fee:10,desc:10,h4:11.5,kv:10.5,tbl:9.5};
+const PLAN_SCALES=[1,0.96,0.93,0.90,0.88];
+/* 每個縮放級距產生一組 class（.c-fit1…）；用固定 pt 而不是 em，Word 才吃得準 */
+function planFitCSS(){
+  return PLAN_SCALES.map(function(s,i){
+    if(!i) return "";
+    const p=".c-fit"+i, r=function(n){return (n*s).toFixed(1)+"pt";};
+    return p+"{font-size:"+r(PLAN_PT.body)+";}"+
+      p+" h3{font-size:"+r(PLAN_PT.h3)+";}"+
+      p+" .c-meta{font-size:"+r(PLAN_PT.meta)+";}"+
+      p+" .c-fee{font-size:"+r(PLAN_PT.fee)+";}"+
+      p+" .c-desc{font-size:"+r(PLAN_PT.desc)+";}"+
+      p+" h4{font-size:"+r(PLAN_PT.h4)+";}"+
+      p+" .c-kv{font-size:"+r(PLAN_PT.kv)+";}"+
+      p+" table.c-tbl{font-size:"+r(PLAN_PT.tbl)+";}";
+  }).join("");
+}
+const MM_PX=96/25.4;                                  /* mm → px（96dpi） */
+const PLAN_W_PX=(210-16*2)*MM_PX;                     /* A4 扣掉左右邊界的內文寬 */
+const PLAN_H_PX=(297-16*2)*MM_PX*0.98;                /* 內文高，留 2% 給列印誤差 */
+const PLAN_SPILL_PX=3*PLAN_PT.body*1.7*(96/72);       /* 3 行的高度 */
+/* 回傳每門課要套用的縮放級距（0 = 不縮）。量不到就全部回 0，寧可不縮也不要縮壞。 */
+function measurePlanFits(bodyHTML){
+  const f=document.createElement("iframe");
+  f.setAttribute("aria-hidden","true");
+  f.style.cssText="position:fixed;left:-9999px;top:0;border:0;visibility:hidden;"+
+    "width:"+PLAN_W_PX+"px;height:"+PLAN_H_PX+"px;";
+  document.body.appendChild(f);
+  const fits=[];
+  try{
+    const d=f.contentWindow.document;
+    d.open();
+    /* 量的時候要拿掉分頁規則，否則量到的是分頁後的高度 */
+    d.write('<!DOCTYPE html><html><head><meta charset="utf-8"><style>'+
+      PLANS_PAGE_CSS+planFitCSS()+
+      ".c-item{page-break-before:auto;break-before:auto;}"+
+      "</style></head><body>"+bodyHTML+"</body></html>");
+    d.close();
+    const items=d.querySelectorAll(".c-item");
+    for(let i=0;i<items.length;i++){
+      const el=items[i];
+      const h=el.offsetHeight;
+      const pages=Math.ceil(h/PLAN_H_PX);
+      const spill=h-(pages-1)*PLAN_H_PX;               /* 最後一頁用掉多少 */
+      /* 只處理「有超出、而且最後一頁只用了三行以內」的情況 */
+      if(pages<2||spill>PLAN_SPILL_PX){ fits.push(0); continue; }
+      const target=(pages-1)*PLAN_H_PX;
+      let pick=0;
+      for(let s=1;s<PLAN_SCALES.length;s++){
+        el.className="c-item c-fit"+s;
+        if(el.offsetHeight<=target){ pick=s; break; }
+      }
+      el.className="c-item";
+      fits.push(pick);
+    }
+  }catch(err){ console.warn("量不到課程說明的高度，維持原字級：",err.message); }
+  f.remove();
+  return fits;
+}
+function plansListHTML(fits){
   /* 必修在前，其餘照小孩課表的時間先後排 */
   const sc=selectedCourses().slice().sort((a,b)=>
     coreRank(a)-coreRank(b)||firstSlotKey(a)-firstSlotKey(b));
   return sc.map(function(c,i){
     const full=FULL[c.id];
-    let h='<div class="c-item'+(i===0?" c-first":"")+'"><h3>'+esc(c.name)+"</h3>";
+    const fit=(fits&&fits[i])?" c-fit"+fits[i]:"";
+    let h='<div class="c-item'+(i===0?" c-first":"")+fit+'"><h3>'+esc(c.name)+"</h3>";
     h+='<p class="c-meta">'+[c.grade,c.teacher+" 老師",allRooms(c)&&("教室 "+allRooms(c)),c.hours,slotText(c)]
       .filter(Boolean).map(esc).join("　｜　")+"</p>";
     if(c.fee) h+='<p class="c-fee">材料費／費用：'+esc(c.fee)+"</p>";
@@ -1783,18 +1849,22 @@ function plansListHTML(){
     return h+"</div>";
   }).join("");
 }
+/* 先量一次，再把量出來的縮放級距套回去重新產生內容 */
+function plansBodyHTML(){
+  return plansListHTML(measurePlanFits(plansListHTML()));
+}
 function downloadPlansDOC(){
   const sc=selectedCourses(); if(!sc.length){alert("還沒有選課喔！");return;}
   const html='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">'+
     '<head><meta charset="utf-8"><title>完整課程說明</title><!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View></w:WordDocument></xml><![endif]-->'+
-    '<style>'+PLANS_PAGE_CSS+'@page{mso-page-orientation:portrait;}</style></head>'+
-    '<body>'+PLANS_TITLE_HTML()+plansListHTML()+'</body></html>';
+    '<style>'+PLANS_PAGE_CSS+planFitCSS()+'@page{mso-page-orientation:portrait;}</style></head>'+
+    '<body>'+PLANS_TITLE_HTML()+plansBodyHTML()+'</body></html>';
   saveBlob(new Blob(['﻿'+html],{type:"application/msword"}),"完整課程說明_種籽115-1.doc");
 }
 function printPlansHTML(){
   return '<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="utf-8"><title>完整課程說明_種籽115-1</title>'+
-    '<style>'+PLANS_PAGE_CSS+'</style></head><body>'+
-    PLANS_TITLE_HTML()+plansListHTML()+
+    '<style>'+PLANS_PAGE_CSS+planFitCSS()+'</style></head><body>'+
+    PLANS_TITLE_HTML()+plansBodyHTML()+
     '</body></html>';
 }
 function downloadPlansPDF(){
