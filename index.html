@@ -1771,10 +1771,10 @@ function coreRank(c){
    一門課一頁，但常常會有課只多出兩三行就掉到第二頁，很浪費紙也難看。
    做法：先在隱藏 iframe 裡用 A4 的內文寬度排一次，量每門課的實際高度；
    凡是「只超出一點點」（<= 3 行）的課，就把那門課的字級整體縮一級再量，
-   縮到剛好收得下為止。縮太多會看不清楚，所以最多縮到 88%，
+   縮到剛好收得下為止。縮太多會看不清楚，所以最多縮到 85%（本文約 9.4pt），
    還是放不下就讓它自然分頁。                                              */
 const PLAN_PT={body:11,h3:14,meta:9.5,fee:10,desc:10,h4:11.5,kv:10.5,tbl:9.5};
-const PLAN_SCALES=[1,0.96,0.93,0.90,0.88];
+const PLAN_SCALES=[1,0.96,0.93,0.90,0.88,0.85];
 /* 每個縮放級距產生一組 class（.c-fit1…）；用固定 pt 而不是 em，Word 才吃得準 */
 function planFitCSS(){
   return PLAN_SCALES.map(function(s,i){
@@ -1792,14 +1792,17 @@ function planFitCSS(){
 }
 const MM_PX=96/25.4;                                  /* mm → px（96dpi） */
 const PLAN_W_PX=(210-16*2)*MM_PX;                     /* A4 扣掉左右邊界的內文寬 */
-const PLAN_H_PX=(297-16*2)*MM_PX*0.98;                /* 內文高，留 2% 給列印誤差 */
-const PLAN_SPILL_PX=3*PLAN_PT.body*1.7*(96/72);       /* 3 行的高度 */
-/* 回傳每門課要套用的縮放級距（0 = 不縮）。量不到就全部回 0，寧可不縮也不要縮壞。 */
+const PLAN_PAGE_PX=(297-16*2)*MM_PX;                  /* 一頁的內文高 */
+const PLAN_SAFE=0.98;                                 /* 留 2% 給列印誤差 */
+const PLAN_SPILL_PX=6*PLAN_PT.body*1.7*(96/72);       /* 最後一頁只用到六行以內就值得縮 */
+/* 回傳每門課要套用的縮放級距（0 = 不縮）。量不到就全部回 0，寧可不縮也不要縮壞。
+   注意：第一門課跟文件標題共用同一頁，可用高度比其他課少，要扣掉標題的高度，
+   否則量起來剛好塞得下、實際印出來卻會擠掉一兩行（點心中就是這樣被漏掉的）。 */
 function measurePlanFits(bodyHTML){
   const f=document.createElement("iframe");
   f.setAttribute("aria-hidden","true");
   f.style.cssText="position:fixed;left:-9999px;top:0;border:0;visibility:hidden;"+
-    "width:"+PLAN_W_PX+"px;height:"+PLAN_H_PX+"px;";
+    "width:"+PLAN_W_PX+"px;height:"+PLAN_PAGE_PX+"px;";
   document.body.appendChild(f);
   const fits=[];
   try{
@@ -1809,17 +1812,24 @@ function measurePlanFits(bodyHTML){
     d.write('<!DOCTYPE html><html><head><meta charset="utf-8"><style>'+
       PLANS_PAGE_CSS+planFitCSS()+
       ".c-item{page-break-before:auto;break-before:auto;}"+
-      "</style></head><body>"+bodyHTML+"</body></html>");
+      "</style></head><body><div id=\"plan-ttl\">"+PLANS_TITLE_HTML()+"</div>"+bodyHTML+"</body></html>");
     d.close();
+    const ttlEl=d.getElementById("plan-ttl");
+    const ttlH=ttlEl?ttlEl.offsetHeight:0;
+    const pageH=PLAN_PAGE_PX*PLAN_SAFE;
     const items=d.querySelectorAll(".c-item");
     for(let i=0;i<items.length;i++){
       const el=items[i];
-      const h=el.offsetHeight;
-      const pages=Math.ceil(h/PLAN_H_PX);
-      const spill=h-(pages-1)*PLAN_H_PX;               /* 最後一頁用掉多少 */
-      /* 只處理「有超出、而且最後一頁只用了三行以內」的情況 */
-      if(pages<2||spill>PLAN_SPILL_PX){ fits.push(0); continue; }
-      const target=(pages-1)*PLAN_H_PX;
+      const firstH=(PLAN_PAGE_PX-(i===0?ttlH:0))*PLAN_SAFE;   /* 這門課第一頁可用多少 */
+      const fitsIn=function(h){                                /* h 需要幾頁、最後一頁用掉多少 */
+        if(h<=firstH) return {pages:1,last:h};
+        const rest=h-firstH, n=Math.ceil(rest/pageH);
+        return {pages:1+n,last:rest-(n-1)*pageH};
+      };
+      const m=fitsIn(el.offsetHeight);
+      /* 只處理「有超出、而且最後一頁只用了幾行」的情況；超出太多就讓它自然分頁 */
+      if(m.pages<2||m.last>PLAN_SPILL_PX){ fits.push(0); continue; }
+      const target=firstH+(m.pages-2)*pageH;                   /* 少一頁的目標高度 */
       let pick=0;
       for(let s=1;s<PLAN_SCALES.length;s++){
         el.className="c-item c-fit"+s;
