@@ -251,6 +251,7 @@ body.zhuyin .how span,body.zhuyin .chip .meta{line-height:2}
 .mine-actions button small{display:block;font-size:10.5px;font-weight:600;opacity:.8;margin-top:1px;letter-spacing:.02em}
 .mine-actions button{line-height:1.2;text-align:center}
 .dl-label{font-size:12.5px;font-weight:800;color:var(--muted)}
+.dl-sep{width:1px;align-self:stretch;background:var(--line);margin:2px 2px}
 .btn-primary{background:var(--brand);color:#fff;border:0;font:inherit;font-weight:800;font-size:14px;padding:10px 18px;border-radius:10px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;box-shadow:var(--shadow)}
 .btn-primary:hover{filter:brightness(1.05)}
 .btn-ghost{background:var(--panel2);color:var(--ink);border:1px solid var(--line);font:inherit;font-weight:700;font-size:14px;padding:10px 16px;border-radius:10px;cursor:pointer;display:inline-flex;align-items:center;gap:7px}
@@ -835,8 +836,9 @@ function blocksToText(blocks){
 /* ---------- 老師原文資料（由 build 腳本注入） ----------
    FULL[課程id]  = 各門課的完整課程規劃原文
    AREADOC[領域] = 該科共同規劃（各年段要求等）
-   DOCS[文件key] = 選課指南／課程規劃前言／導師班規劃   */
-const FULL={}, AREADOC={}, DOCS={}, ZHUFULL={}, PDFMAP={}, DOCXMAP={}, ROOMS={}, TEACHERS={};
+   DOCS[文件key] = 選課指南／課程規劃前言／導師班規劃
+   SUPPLIES[課程id] = 上課需要攜帶的東西（費用不在這裡，讀 C 陣列裡該課的 fee）   */
+const FULL={}, AREADOC={}, DOCS={}, ZHUFULL={}, PDFMAP={}, DOCXMAP={}, ROOMS={}, TEACHERS={}, SUPPLIES={};
 /* 學校原始 PDF 所在資料夾（相對於 index.html） */
 const PDF_DIR="1151/";
 /* 公開版：導師班規劃與所有電子郵件已移除 */
@@ -847,6 +849,7 @@ Object.assign(ZHUFULL,{"一":"ㄧ","丁":"ㄉㄧㄥ","七":"ㄑㄧ","三":"ㄙ�
 Object.assign(DOCXMAP,{"數一(永)102":"m1","數二(奇)103":"m2","作業三(珮)503":"z3","閱寫四(欣)203":"r4","數五(如)201":"m5","英六(涵)501":"e6","語一(欣)102":"guo1","語二(永)103":"guo2","數三(奇)203":"m3","作業四(珮)503":"z4","英五(拓)501":"e5","數六(如)201":"m6","閱寫三(綉)203":"r3","英四(涵)501":"e4","英五(拓)503":"e5","數四(奇)203":"m4","數四(奇)201":"m4","語六(如)501":"guo6","英三(瀅)102":"e3","語六(如)203":"guo6","瑜珈一(蓓)劇":"yoga1","足球低(衛)球":"soccerlow","藝術談字低(桂)102":"charlow","模型中(勻)103":"model_m","語六(如)201":"guo6","表演低(生)203":"drmlow","閱寫四(欣)201":"r4","日文五(蓓)103":"jp5","表演中(芳)203":"drmmid","桌遊中(庭)503":"boardgame","語五(寧瀅)201":"guo5","人類二(涵)圖":"hs2","數五(如)501":"m5","畢製(珮)503":"grad","野耕低(艾)103":"farm","數三(奇)102":"m3","直排輪低(拓)球劇":"skate","思辨高(綉)102":"sibian","日文六(蓓)103":"jp6","再生手作低(習)102":"recycle","數六(如)501":"m6","人類一(涵)圖":"hs1","瑜珈二(蓓)劇":"yoga2","數三(奇)103":"m3","數六(如)203":"m6","舞蹈低(欣)203":"dancelow","棒遊高(永)102球":"baseball","世界餐桌高(瀅)201":"table","神話低(涵)203":"myth","藝術談字中(桂)102":"charmid","足球中高(衛)球":"soccermid","模型高(勻)103":"model_h","單車一(永)102":"bike1","探索二(奇)201":"exp2","織聚中高(欣)203":"knit","美勞高(珮)103":"arthigh","美勞低(珮)103":"artlow","籃球中(晏)球":"bballmid","新創高(庭)201":"startup","表演高(芳)203":"drmhigh","童年低(拳)102/大樹屋":"child","美勞中(珮)103":"artmid","單車中(永)503":"bikemid","百味高(拓)201":"movie","動動高(涵)球":"move","種籽讀書會(寧)203":"read","科學手作二(心)103":"sci2","土地中(蓓)501":"landmid","點心中(艾)503廚":"dessert","自然高(寧)201":"scihigh","食物魔法低(瀅)201廚":"foodmagic","舞武中高(欣)203劇":"dancewu","散步低(蓓)503":"walk","探索一(奇)201":"exp1","單車二(永)503":"bike2","播客中(瀅)102":"podcast","台文化低(家長)503廚":"tai","人類與地球中(寧)102":"earthmid","吟唱低社(如)圖":"sing","小錦囊一社(永) 102":"pouch","吉他高(拓)203":"guitar","急救高(乃)102":"firstaid","健康中(乃)103":"healthmid","人類高(拓)201":"hshigh","羽球中高(庭)廣場":"badm","籃球高(晏)球":"bballhigh"});
 Object.assign(ROOMS,{"arthigh":{"a":"珮","r":{"2-3":"103","2-4":"103"}},"artlow":{"a":"珮","r":{"3-3":"103","3-4":"103"}},"artmid":{"a":"珮","r":{"4-3":"103","4-4":"103"}},"badm":{"a":"庭","r":{"3-5":"廣場"}},"baseball":{"a":"永","r":{"0-3":"102球"}},"bballhigh":{"a":"晏","r":{"3-5":"球"}},"bballmid":{"a":"晏","r":{"3-3":"球"}},"bike1":{"a":"永","r":{"2-3":"102"}},"bike2":{"a":"永","r":{"2-4":"503"}},"bikemid":{"a":"永","r":{"4-3":"503","4-4":"503"}},"boardgame":{"a":"庭","r":{"3-1":"503","3-2":"503"}},"charlow":{"a":"桂","r":{"1-1":"102","1-2":"102"}},"charmid":{"a":"桂","r":{"1-3":"102","1-4":"102"}},"child":{"a":"拳","r":{"4-3":"102/大樹屋","4-4":"102/大樹屋"}},"dancelow":{"a":"欣","r":{"0-3":"203"}},"dancewu":{"a":"欣","r":{"1-4":"203劇","1-5":"203劇"}},"dessert":{"a":"艾","r":{"0-4":"503廚","0-5":"503廚"}},"drmhigh":{"a":"芳","r":{"3-3":"203","3-4":"203"}},"drmlow":{"a":"生","r":{"2-1":"203","2-2":"203"}},"drmmid":{"a":"芳","r":{"3-1":"203","3-2":"203"}},"e3":{"a":"瀅","r":{"0-1":"102","2-1":"102"}},"e4":{"a":"涵","r":{"2-0":"501","0-2":"501","0-3":"501"}},"e5":{"a":"拓","r":{"1-0":"501","2-0":"503","4-0":"503"}},"e6":{"a":"涵","r":{"0-0":"501","3-0":"501","3-1":"501"}},"earthmid":{"a":"寧","r":{"3-4":"102","3-5":"102"}},"exp1":{"a":"奇","r":{"2-4":"201"}},"exp2":{"a":"奇","r":{"2-3":"201"}},"farm":{"a":"艾","r":{"0-2":"103","0-3":"103"}},"firstaid":{"a":"乃","r":{"1-5":"102"}},"foodmagic":{"a":"瀅","r":{"1-4":"201廚","1-5":"201廚"}},"grad":{"a":"珮","r":{"4-1":"503","1-2":"503"}},"guitar":{"a":"拓","r":{"0-5":"203"}},"guo1":{"a":"欣","r":{"1-0":"102","2-0":"102","3-0":"102","4-0":"102"}},"guo2":{"a":"永","r":{"1-0":"103","3-0":"103","4-0":"103","0-1":"103"}},"guo5":{"a":"寧瀅","r":{"3-1":"201","0-2":"201","3-2":"201","4-2":"201"}},"guo6":{"a":"如","r":{"4-0":"501","0-1":"203","1-1":"201","0-2":"203"}},"healthmid":{"a":"乃","r":{"2-5":"103"}},"hs1":{"a":"涵","r":{"4-2":"圖"}},"hs2":{"a":"涵","r":{"4-1":"圖"}},"hshigh":{"a":"拓","r":{"2-5":"201"}},"jp5":{"a":"蓓","r":{"2-1":"103"}},"jp6":{"a":"蓓","r":{"2-2":"103"}},"knit":{"a":"欣","r":{"2-3":"203","2-4":"203"}},"landmid":{"a":"蓓","r":{"0-4":"501","0-5":"501"}},"m1":{"a":"永","r":{"0-0":"102","3-1":"102","4-1":"102"}},"m2":{"a":"奇","r":{"0-0":"103","2-0":"103","3-1":"103"}},"m3":{"a":"奇","r":{"1-0":"203","0-2":"102","4-2":"103"}},"m4":{"a":"奇","r":{"3-0":"203","4-0":"201","0-1":"201","4-1":"201"}},"m5":{"a":"如","r":{"0-0":"201","3-0":"201","4-1":"501","1-2":"201"}},"m6":{"a":"如","r":{"1-0":"201","2-0":"201","3-2":"501","4-2":"203"}},"model_h":{"a":"勻","r":{"1-3":"103","1-4":"103"}},"model_m":{"a":"勻","r":{"1-1":"103","1-2":"103"}},"move":{"a":"涵","r":{"4-3":"球","4-4":"球"}},"movie":{"a":"拓","r":{"4-3":"201","4-4":"201"}},"myth":{"a":"涵","r":{"1-3":"203","2-5":"203"}},"podcast":{"a":"瀅","r":{"2-4":"102","2-5":"102"}},"pouch":{"a":"永","r":{"0-5":"102"}},"r3":{"a":"綉","r":{"2-0":"203","4-0":"203","4-1":"203"}},"r4":{"a":"欣","r":{"0-0":"203","2-1":"201","2-2":"201"}},"read":{"a":"寧","r":{"4-3":"203","4-4":"203"}},"recycle":{"a":"習","r":{"3-2":"102"}},"sci2":{"a":"心","r":{"0-4":"103","0-5":"103"}},"scihigh":{"a":"寧","r":{"0-4":"201","0-5":"201"}},"sibian":{"a":"綉","r":{"2-2":"102"}},"sing":{"a":"如","r":{"4-4":"圖"}},"skate":{"a":"拓","r":{"2-2":"球劇"}},"soccerlow":{"a":"衛","r":{"1-1":"球","1-2":"球"}},"soccermid":{"a":"衛","r":{"1-3":"球","1-4":"球"}},"startup":{"a":"庭","r":{"3-3":"201","3-4":"201"}},"table":{"a":"瀅","r":{"0-3":"201"}},"tai":{"a":"家長","r":{"3-4":"503廚","3-5":"503廚"}},"walk":{"a":"蓓","r":{"1-4":"503","1-5":"503"}},"yoga1":{"a":"蓓","r":{"0-1":"劇"}},"yoga2":{"a":"蓓","r":{"4-2":"劇"}},"z3":{"a":"珮","r":{"0-0":"503","3-0":"503"}},"z4":{"a":"珮","r":{"1-0":"503","4-2":"503"}}});
 Object.assign(TEACHERS,{"欣":"潔欣","永":"凌永","如":"婉如","珮":"宜珮","嘉":"嘉怡","瀅":"瀅婷","涵":"舒涵","拓":"拓吾","蓓":"蓓蓓","奇":"沛奇","艾":"宇艾","心":"心宇","寧":"瑋寧","桂":"佳桂","生":"國生","芳":"芳羽","乃":"乃雯","衛":"衛教練","晏":"晏履","庭":"瑋庭","拳":"翊銓","習":"習之","勻":"勻琪","倍":"倍蓓","君":"宜君","寧瀅":"瑋寧、瀅婷","家長":"家長","綉":"綉惠"});
+Object.assign(SUPPLIES,{"guo1":["鉛筆袋或鉛筆盒（內有鉛筆兩支以上，推薦三角鉛筆）","好擦的橡皮擦","鉛筆盒請盡量樸素，避免太花俏影響上課"],"guo2":["鉛筆 3 枝","橡皮擦","螢光筆","字典","資料夾（Ｌ夾）"],"z3":["鉛筆、橡皮擦、螢光筆、紅筆"],"z4":["鉛筆、橡皮擦、螢光筆、紅筆"],"r3":["專屬閱寫課的 A4 活頁資料夾（含內袋）","鉛筆、橡皮擦、螢光筆、彩虹筆、剪刀、膠水"],"r4":["一本專屬的資料夾（A4 大小），盡量不與其他科目混用","基本文具"],"jp5":["筆記本、筆"],"jp6":["筆記本、筆"],"walk":["雨衣（下雨天步道課仍會出門）"],"farm":["不怕弄髒的衣物、鞋子、輕便雨衣（小雨仍會進行野耕）","書寫及繪畫文具（野耕筆記用）"],"landmid":["A4 筆記本和筆"],"hshigh":["一本大小適中的筆記本","一張半開的世界地形圖（可自備，也可跟老師買，見費用）","剪刀、口紅膠等黏貼裁剪工具"],"sibian":["一本空白筆記本","鉛筆、橡皮擦、螢光筆"],"movie":["一個資料夾（收藏電影提問單）"],"table":["一本 A4 大小的筆記本"],"artlow":["彩色筆、蠟筆、膠水、剪刀"],"guitar":["吉他、Capo 夾、歌本、筆","調音器（非必備，家裡有可帶來）","上課前請剪指甲"],"dancelow":["方便大動作活動的服裝","襪子或舞鞋（不要穿短裙）"],"yoga1":["瑜珈墊和抹布（試上的人可先跟老師借墊）"],"yoga2":["瑜珈墊和抹布"],"soccerlow":["球鞋","備用衣物（雨天會改上室內課）"],"soccermid":["球鞋","備用衣物（雨天會改上室內課）"],"bballmid":["球鞋、運動服"],"bballhigh":["球鞋、運動服","可自備籃球供團體使用"],"move":["球鞋（不要穿涼鞋或不適合運動的鞋子）"],"skate":["適合運動的服裝（避免裙裝）","高筒襪子（習慣穿涼鞋的孩子請在校準備備用襪）","尺寸合適的直排輪與護具（手掌、手肘、膝蓋、安全帽），若有遺失請補齊"],"badm":["自備羽球拍，並貼上姓名自行保管（老師與學校不提供球拍、球網、球外借）"],"dessert":["書寫及繪畫文具（點心課筆記用）"],"model_m":["剪刀、筆、美工刀（依自己狀況衡量）","切割墊","空白筆記本（畫設計圖用）"],"model_h":["剪刀、筆、美工刀（依自己狀況衡量）","切割墊","空白筆記本（畫設計圖用）"],"knit":["針具：4mm（美規 6 號）棒針或輪針（也可自備家中現有尺寸）","記號扣、剪刀","個人喜愛的毛線"],"baseball":["方便活動的衣褲＋運動鞋"],"startup":["平板或筆電（且會操作），並安裝 Canva、ChatGPT、Gemini 等軟體"],"bike1":["一台屬於自己的單車（建議上課前先送腳踏車店健檢：內外胎、煞車皮、變速器）","安全帽（確認內外保麗龍完整、頭型合適、繩環扣環可正常使用）"],"bike2":["一台屬於自己的單車（建議上課前先送腳踏車店健檢：內外胎、煞車皮、變速器）","安全帽（確認內外保麗龍完整、頭型合適、繩環扣環可正常使用）"],"bikemid":["延續單車一、二的準備：自己的單車與安全帽","合適的水壺架與水壺"],"dancewu":["方便大動作伸展的舒適運動服裝","室內請穿舞鞋或襪子；室外請穿球鞋（不可穿拖鞋或赤腳）","長髮請綁好"]});
 
 const LS_SEL="seedling1151_selected", LS_MODE="seedling1151_mode", LS_THEME="seedling1151_theme";
 let selected=new Set(JSON.parse(localStorage.getItem(LS_SEL)||"[]"));
@@ -1240,6 +1243,10 @@ function renderMine(){
       '<button class="btn-primary" id="dlDoc" title="下載後用 Word 開啟列印，版面與學校課表完全相同">📝 Word<small>跟學校一樣</small></button>'+
       '<button class="btn-ghost" id="dlPdf" title="直接開啟列印視窗，版面為近似版">📄 PDF<small>快速列印</small></button>'+
       '<button class="btn-ghost" id="dlPng" title="存成圖片，方便用手機看或傳給別人">🖼 圖片<small>手機好看</small></button>'+
+      '<span class="dl-sep" aria-hidden="true"></span>'+
+      '<span class="dl-label">攜帶物品／費用：</span>'+
+      '<button class="btn-ghost" id="dlSupplyDoc" title="每堂課要帶的東西與要繳的費用，Word 版">🎒 Word</button>'+
+      '<button class="btn-ghost" id="dlSupplyPdf" title="每堂課要帶的東西與要繳的費用，直接開啟列印視窗">🎒 PDF</button>'+
       '<button class="btn-ghost" id="clearBtn">清空</button>'+
     '</div></div>';
   if(clashCount) html+='<div class="conflict-note">⚠ 有 '+clashCount+' 個時段選了不只一門課（衝堂），下方課表以紅色標出，請調整。</div>';
@@ -1274,6 +1281,8 @@ function renderMine(){
   document.getElementById("dlPng").addEventListener("click",downloadPNG);
   document.getElementById("dlPdf").addEventListener("click",downloadPDF);
   document.getElementById("dlDoc").addEventListener("click",downloadDOC);
+  document.getElementById("dlSupplyDoc").addEventListener("click",downloadSuppliesDOC);
+  document.getElementById("dlSupplyPdf").addEventListener("click",downloadSuppliesPDF);
   document.getElementById("clearBtn").addEventListener("click",()=>{if(confirm("確定要清空所有已選課程嗎？")){selected.clear();saveSel();updateCount();renderMine();renderGrid();}});
   refreshZhuyin();
 }
@@ -1621,6 +1630,70 @@ function downloadPDF(){
   setTimeout(function(){
     try{ f.contentWindow.focus(); f.contentWindow.print(); }
     catch(err){ alert("這台裝置無法直接列印，已改用「Word」或「圖片」下載試試看。"); }
+  },400);
+}
+
+/* ---------- 攜帶物品／費用清單匯出 ----------
+   跟課表匯出分開的另一份文件：每個人選的課不同，要帶的東西跟要繳的錢也不同。
+   東西清單來自 SUPPLIES（data/supplies.js，整理自老師原文），費用直接讀 C 陣列裡該課的 fee——
+   兩邊資料只維護一份，不會兜不起來。基本資料（課名／年級／老師）每門課都印，
+   東西跟費用「有才印」，兩個都沒有就註明不需要另外準備。                          */
+const SUPPLIES_PAGE_CSS=
+  "@page{size:A4 portrait;margin:16mm;}"+
+  "html,body{margin:0;padding:0;}"+
+  "body{font-family:'Microsoft JhengHei','微軟正黑體','PingFang TC',sans-serif;color:#000;font-size:11pt;line-height:1.6;"+
+  "-webkit-print-color-adjust:exact;print-color-adjust:exact;}"+
+  "h2.t{font-size:16pt;font-weight:bold;text-align:center;margin:0 0 2mm;}"+
+  "p.sub{font-size:9pt;text-align:center;color:#555;margin:0 0 6mm;}"+
+  ".s-item{border:1px solid #999;border-radius:4px;padding:7px 12px;margin:0 0 8px;page-break-inside:avoid;}"+
+  ".s-item h3{margin:0 0 4px;font-size:13pt;}"+
+  ".s-item h3 .s-meta{font-size:10pt;font-weight:normal;color:#333;margin-left:10px;}"+
+  ".s-item ul{margin:4px 0 0;padding-left:1.4em}"+
+  ".s-item li{margin:2px 0}"+
+  ".s-fee{margin:6px 0 0;font-weight:bold}"+
+  ".s-none{margin:4px 0 0;color:#555}";
+function SUPPLIES_TITLE_HTML(){
+  return '<h2 class="t">我的課表・攜帶物品與費用清單</h2><p class="sub">種籽實小 115 學年度第一學期　（實際開課內容、金額以學校公告及老師通知為準）</p>';
+}
+function suppliesListHTML(){
+  const sc=selectedCourses().slice().sort((a,b)=>a.slots[0][0]-b.slots[0][0]||a.slots[0][1]-b.slots[0][1]);
+  return sc.map(function(c){
+    const items=SUPPLIES[c.id]||[];
+    const fee=c.fee||"";
+    let body="";
+    if(items.length) body+="<ul>"+items.map(function(x){return "<li>"+esc(x)+"</li>";}).join("")+"</ul>";
+    if(fee) body+='<p class="s-fee">💰 費用：'+esc(fee)+"</p>";
+    if(!items.length&&!fee) body='<p class="s-none">不需要另外準備物品或費用。</p>';
+    return '<div class="s-item"><h3>'+esc(c.name)+'<span class="s-meta">'+esc(c.grade)+"／"+esc(c.teacher)+"</span></h3>"+body+"</div>";
+  }).join("");
+}
+function downloadSuppliesDOC(){
+  const sc=selectedCourses(); if(!sc.length){alert("還沒有選課喔！");return;}
+  const html='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">'+
+    '<head><meta charset="utf-8"><title>攜帶物品與費用清單</title><!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View></w:WordDocument></xml><![endif]-->'+
+    '<style>'+SUPPLIES_PAGE_CSS+'@page{mso-page-orientation:portrait;}</style></head>'+
+    '<body>'+SUPPLIES_TITLE_HTML()+suppliesListHTML()+'</body></html>';
+  saveBlob(new Blob(['﻿'+html],{type:"application/msword"}),"攜帶物品與費用_種籽115-1.doc");
+}
+function printSuppliesHTML(){
+  return '<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="utf-8"><title>攜帶物品與費用_種籽115-1</title>'+
+    '<style>'+SUPPLIES_PAGE_CSS+'</style></head><body>'+
+    SUPPLIES_TITLE_HTML()+suppliesListHTML()+
+    '</body></html>';
+}
+function downloadSuppliesPDF(){
+  const sc=selectedCourses(); if(!sc.length){alert("還沒有選課喔！");return;}
+  const old=document.getElementById("printFrameSupplies"); if(old)old.remove();
+  const f=document.createElement("iframe");
+  f.id="printFrameSupplies";
+  f.setAttribute("aria-hidden","true");
+  f.style.cssText="position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;";
+  document.body.appendChild(f);
+  const d=f.contentWindow.document;
+  d.open(); d.write(printSuppliesHTML()); d.close();
+  setTimeout(function(){
+    try{ f.contentWindow.focus(); f.contentWindow.print(); }
+    catch(err){ alert("這台裝置無法直接列印，已改用「Word」下載試試看。"); }
   },400);
 }
 
